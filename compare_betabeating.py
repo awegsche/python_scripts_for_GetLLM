@@ -1,12 +1,9 @@
-
-
-''
-
 import os
 import sys
 import contextlib
 import argparse
 import stat
+
 
 sys.path.append("/home/awegsche/Beta-Beat.src/")
 
@@ -17,6 +14,7 @@ from shutil import copyfile
 from time import sleep
 
 from utils.ADDbpmerror import convert_files
+from utils import logging_tools
 from math import sqrt
 import re
 from matplotlib import rc
@@ -29,27 +27,26 @@ import pandas as pd
 BW = False
 LEN = 20
 
+LOG = logging_tools.get_logger(__name__, level_console=DEBUG)
 
 # =============================================================================
 # ======== function definitions ===============================================
 # =============================================================================
 
-
-    
 def write_Boolean(name, value):
     line = name
     for i in range(len(name), LEN):
         line += " "
     if value:
-        print line + "\33[38;2;0;255;0mYES\33[0m"
+        LOG.info( line + "\33[38;2;0;255;0mYES\33[0m")
     else:
-        print line + "\33[38;2;255;0;0mNO\33[0m"
+        LOG.info(line + "\33[38;2;255;0;0mNO\33[0m")
 
 def write_String(name, value):
     line = name
     for i in range(len(name), LEN):
         line += " "
-    print line + value
+    LOG.info(line + value)
 
 def make_cmdline_argument(argument):
     if " " in argument:
@@ -58,7 +55,7 @@ def make_cmdline_argument(argument):
 
 def make_bar(value, maxvalue=100):
     return "".join(["#"] * int(value/maxvalue*300))
-    
+
 OMC_LOGO = """
      ######    ##L          ##      ######
    d##   ##b   ###L        ###    ####   ##
@@ -80,22 +77,45 @@ cmdline = " ".join([make_cmdline_argument(x) for x in sys.argv])
 parser = argparse.ArgumentParser(description='Plots the betabeating from GetLLM.')
 subparsers = parser.add_subparsers(help='sub-command help', title="submodules")
 
-parser_omc = subparsers.add_parser('omc', help='OMC style plots? LHC interaction regions will be labelled between the x and y plots. They share the same x-axis and the legend is placed within one of them.')
+parser_omc = subparsers.add_parser(
+    'omc',
+    help=('OMC style plots? LHC interaction regions will be labelled between the x and y plots.'
+          'They share the same x-axis and the legend is placed within one of them.')
 
 parser_histo = subparsers.add_parser('histo', help='Histogram of error bars.')
 parser_reveal = subparsers.add_parser('reveal', help='Create data points for reveal.js slides')
 
 
-parser.add_argument('--bet1', dest='getbetax', default=None, metavar='OUTPUTDIR', help='specifies the folder that contains getbetax.out. "')
-parser.add_argument('--bet2', dest='getbetax2', default=None, metavar='OUTPUTDIR', help='specifies the folder that contains getbetax.out. "')
-parser.add_argument('-p', dest='plot', metavar='MODE', help='specifies the plot mode.\n-1   Only beta beating\n 0   Betabeating with number of used combinations', default=-1,type=int)
-parser.add_argument('--print', dest='printplt', metavar='FILENAME', help='should the plot be saved as jpg?', default="")
-parser.add_argument('--ylim', dest='ylim', metavar='FLOAT', type=float, default=-1, help="limits of y axis in percent")
-parser.add_argument('--label1', dest='label1', metavar='LABLE', default='N-BPM', help="label for the data, default=N-BPM")
-parser.add_argument('--label2', dest='label2', metavar='LABLE', default='N-BPM', help="label for the data, default=N-BPM")
-parser.add_argument('--absolut', dest='absolut', action="store_true", help="instead of beta beating, print the absolute beta")
-parser.add_argument('--width', dest='width', metavar='WIDTH', default=20.0, type=float, help="the design width of the printed plot")
-parser.add_argument('--height', dest='height', metavar='HEIGHT', default=None, type=float, help="the design height of the printed plot")
+parser.add_argument('--bet1', dest='getbetax', default=None, metavar='OUTPUTDIR',
+                    help='specifies the folder that contains getbetax.out. "')
+
+parser.add_argument('--bet2', dest='getbetax2', default=None, metavar='OUTPUTDIR',
+                    help='specifies the folder that contains getbetax.out. "')
+
+parser.add_argument('--label1', dest='label1', metavar='LABLE', default='N-BPM',
+                    help="label for the data, default=N-BPM")
+
+parser.add_argument('--label2', dest='label2', metavar='LABLE', default='N-BPM',
+                    help="label for the data, default=N-BPM")
+
+parser.add_argument('-p', dest='plot', metavar='MODE',
+                    help='specifies the plot mode.\n-1   Only beta beating\n 0   Betabeating with number of used combinations', default=-1,type=int)
+
+parser.add_argument('--print', dest='printplt', metavar='FILENAME',
+                    help='should the plot be saved as jpg?', default="")
+
+parser.add_argument('--ylim', dest='ylim', metavar='FLOAT', type=float, default=-1,
+                    help="limits of y axis in percent")
+
+parser.add_argument('--absolut', dest='absolut', action="store_true",
+                    help="instead of beta beating, print the absolute beta")
+
+parser.add_argument('--width', dest='width', metavar='WIDTH', default=20.0, type=float,
+                    help="the design width of the printed plot")
+
+parser.add_argument('--height', dest='height', metavar='HEIGHT', default=None, type=float,
+                    help="the design height of the printed plot")
+
 parser.add_argument('--nolegend', dest='legend', action="store_false", help="if set, no legend will be printed")
 parser.add_argument('--cut', dest='cut', metavar='CUT', default=100.0, type=float, help="the maximal beta beating to be included in the calculation of the average, rms etc. Default = 100")
 parser.add_argument('--zoom', dest='zoom', metavar='MIN,MAX', default=None, help="zooms to a certain xrange.")
