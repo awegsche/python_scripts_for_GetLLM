@@ -5,6 +5,7 @@ import betabeatsrc
 
 import pandas as pd
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from utils import tfs_pandas
 
@@ -32,7 +33,11 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
             ax1.set_ylim(0, ylim)
     else:
         ylim = 100000
-    IPtickslabels = ["IP2","IP3","IP4","IP5","IP6","IP7","IP8","IP1"]
+    IPtickslabels = [
+        "\\textbf{{\\sffamily IP2}}", "\\textbf{{\\sffamily IP3}}", "\\textbf{{\\sffamily IP4}}",
+        "\\textbf{{\\sffamily IP5}}", "\\textbf{{\\sffamily IP6}}", "\\textbf{{\\sffamily IP7}}",
+        "\\textbf{{\\sffamily IP8}}", "\\textbf{{\\sffamily IP1}}"
+    ]
     if params["lhcbeam"] == "1":
         IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
     else:
@@ -57,8 +62,13 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
                 ax1.set_xticks(IPticks)
                 ax1.set_xticklabels(IPtickslabels)
                 ax1.xaxis.set_ticks_position('none')
+                print "setting font weight"
+                for label in ax1.xaxis.get_majorticklabels():
+                    label.set_size(int(params["ip_fontsize"]))
+                    label.set_weight("bold")
+                    label.set_family("sans-serif")
 
-        if params["ipbars"] == "1" and not parameters["style"] == "OMC":
+        if params["ipbars"] == "1" and not params["style"] == "OMC":
             for x in IPticks:
                 ax1.plot((x, x), (-ylim, ylim), "-", color="#D0D0D0")
     if params['omctitle'] != "" and plot_omctitle:
