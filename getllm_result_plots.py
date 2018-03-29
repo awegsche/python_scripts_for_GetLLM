@@ -53,16 +53,14 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
         ax1.set_xlim(0, 3020)
     else:
         ax1.set_xlim(0,27000)
-        if params["style"] == "OMC" and params["IPticks"] == "1":
-            #betabeating_.set_index("NAME").loc["IP1"]["S"]
-            if plot_omctitle:
+        if params["IPticks"] == "1" and plot_omctitle:
                 ax1.set_xticks(IPticks)
                 ax1.set_xticklabels(IPtickslabels)
-
                 ax1.xaxis.set_ticks_position('none')
-            if params["ipbars"] == "1":
-                for x in IPticks:
-                    ax1.plot((x, x), (-args.ylim, args.ylim), "-", color="#D0D0D0")
+
+        if params["ipbars"] == "1" and not parameters["style"] == "OMC":
+            for x in IPticks:
+                ax1.plot((x, x), (-ylim, ylim), "-", color="#D0D0D0")
     if params['omctitle'] != "" and plot_omctitle:
         ax1.text(1.0, 1.02, params['omctitle'], verticalalignment='bottom', horizontalalignment='right', transform=ax1.transAxes, fontsize=14)
 
@@ -81,7 +79,7 @@ def find_model(outputfolder):
     if os.path.isfile(os.path.join(outputfolder, "themodel")):
         with open(os.path.join(outputfolder, "themodel")) as themodel:
             line = themodel.readline()
-            print line
+            print "model found in 'themodel' file"
             tfsmodel = tfs_pandas.read_tfs(os.path.join(line, "twiss_elements.dat"))
         return tfsmodel
 

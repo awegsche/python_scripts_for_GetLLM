@@ -128,7 +128,8 @@ def set_param(command):
         parameters[words[0]] = words[1]
     elif len(words) == 1:
         words = words[0].split(' ', 1)
-        parameters[words[0]] = words[1]
+        if len(words) == 2:
+            parameters[words[0]] = words[1]
     else:
         print "----- didn't understand the command. please try again --------"
 
@@ -264,6 +265,7 @@ def plot_betabeating(command):
         setup_plot_area(parameters, ax2, model, y_label2, x_label, False)
         x_label = ""
     else:
+        parameters["IPticks"] = "0"
         f, ax1 = plt.subplots(nrows=1, figsize=(width, height * .6))
 
     setup_plot_area(parameters, ax1, model, y_label, x_label, True)
@@ -287,6 +289,7 @@ def plot_betabeating(command):
             print "\n"
             print OMC_LOGO
             print "\n"
+            parameters["tl_loc"] = 0.0
             if parameters["loc"] == "1":
                 ax1.legend(bbox_to_anchor=(.98, .98), loc="upper right",ncol=2)
                 parameters["tl_loc"] = 0.0
@@ -306,13 +309,11 @@ def plot_betabeating(command):
                 ax2.legend(loc=parameters["loc"].split(":")[1], ncol=3)
                 parameters["tl_loc"] = 0.0
         else:
-            ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+            ax1.legend(bbox_to_anchor=(0., 1.15, 1., .102), loc=3,
                        ncol=2, mode="expand", borderaxespad=0.)
-            ax2.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                       ncol=2, mode="expand", borderaxespad=0.)
-            parameters["tl_loc"] = 0.0
+            parameters["tl_loc"] -= .075
     if parameters["omctitle"] != "":
-        parameters["tl_title"] = -0.05
+        parameters["tl_title"] -= 0.05
 
     tightlayout = parameters["tightlayout_height"] + parameters["tl_loc"] + parameters["tl_title"]
 
