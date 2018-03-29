@@ -36,6 +36,7 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
     if params["lhcbeam"] == "1":
         IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
     else:
+        print " W A R N I N G: Beam2 fallback IPs have to be looked up"
         IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
     # try to find the positions of the IPs
     if params["accel"] == "LHC":
@@ -54,10 +55,11 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
         ax1.set_xlim(0,27000)
         if params["style"] == "OMC" and params["IPticks"] == "1":
             #betabeating_.set_index("NAME").loc["IP1"]["S"]
-            ax1.set_xticks(IPticks)
-            ax1.set_xticklabels(IPtickslabels)
+            if plot_omctitle:
+                ax1.set_xticks(IPticks)
+                ax1.set_xticklabels(IPtickslabels)
 
-            ax1.xaxis.set_ticks_position('none') 
+                ax1.xaxis.set_ticks_position('none')
             if params["ipbars"] == "1":
                 for x in IPticks:
                     ax1.plot((x, x), (-args.ylim, args.ylim), "-", color="#D0D0D0")
