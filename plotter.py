@@ -30,7 +30,7 @@ import pandas as pd
 BW = False
 LEN = 20
 
-LOG = logging_tools.get_logger(__name__, level_console=logging.DEBUG)
+LOG = logging_tools.get_logger(__name__, level_console=logging.INFO)
 print "path:"
 for pathstring in sys.path:
     print pathstring
@@ -53,6 +53,7 @@ OMC_LOGO = """
 # --------------------------------------------------------------------------------------------------
 # ---------- parameters for the program ------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------
+commands = []
 
 parameters = {
     "width": "8",
@@ -71,6 +72,7 @@ parameters = {
     "lhcbeam": "1",
     "loc": "1",
     "legend": "1",
+    "ip_fontsize": "14",
     "tightlayout_height": 1.0,
     "tl_loc": 0.0,
     "tl_title": 0.0
@@ -289,31 +291,31 @@ def plot_betabeating(command):
             print "\n"
             print OMC_LOGO
             print "\n"
+        parameters["tl_loc"] = 0.0
+        if parameters["loc"] == "1":
+            ax1.legend(bbox_to_anchor=(.98, .98), loc="upper right",ncol=2)
             parameters["tl_loc"] = 0.0
-            if parameters["loc"] == "1":
-                ax1.legend(bbox_to_anchor=(.98, .98), loc="upper right",ncol=2)
-                parameters["tl_loc"] = 0.0
-            elif parameters["loc"] == "2":
-                ax2.legend(bbox_to_anchor=(.98, .98), loc="upper right",ncol=2)
-                parameters["tl_loc"] = 0.0
-            elif parameters["loc"] == "out":
-                ax1.legend(bbox_to_anchor=(1.02, 1), loc="lower right",ncol=2)
-                parameters["tl_loc"] = -0.1
-            elif parameters["loc"] == "auto":
-                ax1.legend()
-                parameters["tl_loc"] = 0.0
-            elif parameters["loc"].startswith("1:"):
-                ax1.legend(loc=parameters["loc"].split(":")[1], ncol=3)
-                parameters["tl_loc"] = 0.0
-            elif parameters["loc"].startswith("2:"):
-                ax2.legend(loc=parameters["loc"].split(":")[1], ncol=3)
-                parameters["tl_loc"] = 0.0
+        elif parameters["loc"] == "2":
+            ax2.legend(bbox_to_anchor=(.98, .98), loc="upper right",ncol=2)
+            parameters["tl_loc"] = 0.0
+        elif parameters["loc"] == "out":
+            ax1.legend(bbox_to_anchor=(1.02, 1), loc="lower right",ncol=2)
+            parameters["tl_loc"] = -0.1
+        elif parameters["loc"] == "auto":
+            ax1.legend()
+            parameters["tl_loc"] = 0.0
+        elif parameters["loc"].startswith("1:"):
+            ax1.legend(loc=parameters["loc"].split(":")[1], ncol=3)
+            parameters["tl_loc"] = 0.0
+        elif parameters["loc"].startswith("2:"):
+            ax2.legend(loc=parameters["loc"].split(":")[1], ncol=3)
+            parameters["tl_loc"] = 0.0
         else:
             ax1.legend(bbox_to_anchor=(0., 1.15, 1., .102), loc=3,
                        ncol=2, mode="expand", borderaxespad=0.)
-            parameters["tl_loc"] -= .075
+            parameters["tl_loc"] = -.075
     if parameters["omctitle"] != "":
-        parameters["tl_title"] -= 0.05
+        parameters["tl_title"] = -0.05
 
     tightlayout = parameters["tightlayout_height"] + parameters["tl_loc"] + parameters["tl_title"]
 
@@ -323,6 +325,23 @@ def plot_betabeating(command):
 
     if command == 'print':
         f.savefig(parameters["ofile"])
+
+def save_commands(command):
+    """Saves all commands typed in by the user until now. Loading and executing saved commands
+should restore a previous session and enable replotting;
+Usage:
+    save FILE   prints the commands to the file FILE
+    save        prints the commands to the file 'cmd'"""
+
+    if command == "":
+        path = "cmd"
+    else:
+        path = command
+
+    with open(path, "w") as ofile:
+        for cmd in commands:
+            ofile.write(cmd + "\n")
+    print "commands saved to {}".format(path)
 
 # --------------------------------------------------------------------------------------------------
 # ---------- terminal initialization ---------------------------------------------------------------
@@ -371,6 +390,8 @@ terminal.add_command(aliases=['s', 'status'],
                      action=status)
 terminal.add_command(aliases=['reset'],
                      action=reset)
+terminal.add_command(aliases=['save'],
+                     action=save_commands)
 # --------------------------------------------------------------------------------------------------
 # ---------- main loop -----------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------
@@ -379,6 +400,7 @@ while CONT:
     command = raw_input("[in {}] ".format(cmd_nr))
     if terminal.run_command(command):
         cmd_nr = cmd_nr + 1
+        commands.append(command)
     else:
         if command == "quit" or command == "exit" or command == "q":
             CONT = False
