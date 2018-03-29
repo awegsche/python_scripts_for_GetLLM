@@ -1,32 +1,23 @@
 import sys
 import os
-sys.path.append("/home/awegsche/Beta-Beat.src/")
+
+import betabeatsrc
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import tfs_pandas
 
-def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel):
+OFILELIST = [
+    "getbetax.out",
+    "getphasex.out",
+    "getphasex_free.out",
+    "getbetay.out",
+    "getbetay_free.out",
+    "getphasey_free.out",
+    "getphasey.out"]
 
-    plt.rc('text', usetex=True)
-    params["tightlayout_height"] = 1.0
-    if params["style"] == "OMC":
-        plt.rc('font', family='sans-serif')
-        plt.rc('xtick.major', pad=6)
-
-    else:
-        plt.rc('font', family='serif')
-    plt.rc('axes', labelsize=16)
-    plt.rc('xtick', labelsize=16)
-    plt.rc('ytick', labelsize=16)
-    plt.rc('legend', fontsize=16)
-#    plt.rc("text.latex", preamble=[
-#                                   r'\usepackage{siunitx}',
-#                                   r'\usepackage{helvetica}',
-#                                   r'\usepackage{sansmath}',
-#                                   r'\sansmath'
-#                               ])
+def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True):
 
     params["plfmt"] = " o"
     if params["lines"] == "1":
@@ -42,16 +33,14 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel):
     else:
         ylim = 100000
     IPtickslabels = ["IP2","IP3","IP4","IP5","IP6","IP7","IP8","IP1"]
-    if params["lhcbeam"] == "LHCB1":
+    if params["lhcbeam"] == "1":
         IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
     else:
         IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
     # try to find the positions of the IPs
     if params["accel"] == "LHC":
         for i in range(len( IPtickslabels)):
-            IPticks[i] = tfsmodel.loc[IPtickslabels[i]]["S"]
-
-    tightlayout_height = .98
+            IPticks[i] = tfsmodel["S"].get(IPtickslabels[i], IPticks[i])
 
     if params["accel"] == "JPARC":
         ax1.set_xlim(0, 1600)
@@ -59,9 +48,11 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel):
         ax1.set_xlim(0, 2350)
     elif params["accel"] == "CPS":
         ax1.set_xlim(0, 630)
+    elif params["accel"] == "SuperKEKB":
+        ax1.set_xlim(0, 3020)
     else:
         ax1.set_xlim(0,27000)
-        if params["style"] == "OMC":
+        if params["style"] == "OMC" and params["IPticks"] == "1":
             #betabeating_.set_index("NAME").loc["IP1"]["S"]
             ax1.set_xticks(IPticks)
             ax1.set_xticklabels(IPtickslabels)
@@ -70,9 +61,8 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel):
             if params["ipbars"] == "1":
                 for x in IPticks:
                     ax1.plot((x, x), (-args.ylim, args.ylim), "-", color="#D0D0D0")
-    if params['omctitle'] != "":
+    if params['omctitle'] != "" and plot_omctitle:
         ax1.text(1.0, 1.02, params['omctitle'], verticalalignment='bottom', horizontalalignment='right', transform=ax1.transAxes, fontsize=14)
-        params["tightlayout_height"] -= 0.05
 
     if params['zoom'] != "all":
         zoom = params['zoom'].split(",")
@@ -82,14 +72,30 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel):
     ax1.set_xlabel(xlabel)
 
 
-def find_model(output_file):
+def find_model(outputfolder):
+
+    tfsmodel = None
+
+    if os.path.isfile(os.path.join(outputfolder, "themodel")):
+        with open(os.path.join(outputfolder, "themodel")) as themodel:
+            line = themodel.readline()
+            print line
+            tfsmodel = tfs_pandas.read_tfs(os.path.join(line, "twiss_elements.dat"))
+        return tfsmodel
+
+    output_filepath = os.path.join(outputfolder, "getbetax_free.out")
+    i = 0
+    while not os.path.isfile(output_filepath):
+        output_filepath = os.path.join(outputfolder, OFILELIST[i])
+        i = i + 1
+
+    outputfile = tfs_pandas.read_tfs(output_filepath)
 
     print ". . . . . . . . . ."
     print ". . . . .command: ."
     print output_file.headers["Command"]
     print ". . . . . . . . . ."
-    tfsmodel = None
-    
+
     commandargs = output_file.headers["Command"].split("' '")
     for i, comm in enumerate(commandargs):
         words = comm.split("=")
@@ -121,5 +127,5 @@ def load_result(path):
     return bbx, bby, dfx, dfy
 
 def plot_errorbar(ax, df, color, label, fmt):
-    ax.errorbar(df["S"], df["BBEAT"], df["ERR"], label=label, c=color, fmt=fmt, markersize=3.0)
+    ax.errorbar(df["S"], df["BBEAT"], df["ERR"], label=label, c=color[0], markeredgecolor=color[1], fmt=fmt, markersize=3.0)
 
