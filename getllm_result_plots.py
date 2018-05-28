@@ -18,6 +18,15 @@ OFILELIST = [
     "getphasey_free.out",
     "getphasey.out"]
 
+class GetLLMResult:
+    def __init__(self, p):
+        self.betax = None
+        self.betay = None
+        self.phasex = None
+        self.phasey = None
+        self.lobster = None
+        self.path = p
+
 def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True):
 
     params["plfmt"] = " o"
@@ -38,15 +47,28 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
         "\\textbf{{\\sffamily IP5}}", "\\textbf{{\\sffamily IP6}}", "\\textbf{{\\sffamily IP7}}",
         "\\textbf{{\\sffamily IP8}}", "\\textbf{{\\sffamily IP1}}"
     ]
-    if params["lhcbeam"] == "1":
+    IPticknames = [
+        "IP2", "IP3", "IP4", "IP5", "IP6", "IP7", "IP8", "IP1"
+    ]
+    if params["beam"] == "1":
         IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
     else:
         print " W A R N I N G: Beam2 fallback IPs have to be looked up"
         IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
     # try to find the positions of the IPs
+    ticktup = []
     if params["accel"] == "LHC":
+        print " reading IP positions from model ..."
         for i in range(len( IPtickslabels)):
-            IPticks[i] = tfsmodel["S"].get(IPtickslabels[i], IPticks[i])
+            ticktup.append([
+                IPtickslabels[i],
+                tfsmodel["S"].get(IPticknames[i], IPticks[i])
+            ])
+
+
+    ticktup.sort(key=lambda tup: tup[1])
+    IPtickslabels = zip(*ticktup)[0]
+    IPticks = zip(*ticktup)[1]
 
     if params["accel"] == "JPARC":
         ax1.set_xlim(0, 1600)
@@ -90,16 +112,17 @@ def find_model(outputfolder):
         with open(os.path.join(outputfolder, "themodel")) as themodel:
             line = themodel.readline()
             print "model found in 'themodel' file"
-            tfsmodel = tfs_pandas.read_tfs(os.path.join(line, "twiss_elements.dat"))
+            print "path = {}".format(line)
+            tfsmodel = tfs_pandas.read_tfs(os.path.join(line, "twiss_elements.dat"), index="NAME")
         return tfsmodel
 
     output_filepath = os.path.join(outputfolder, "getbetax_free.out")
     i = 0
-    while not os.path.isfile(output_filepath):
+    while not os.path.isfile(output_filepath) and i < len(OFILELIST):
         output_filepath = os.path.join(outputfolder, OFILELIST[i])
         i = i + 1
 
-    outputfile = tfs_pandas.read_tfs(output_filepath)
+    output_file = tfs_pandas.read_tfs(output_filepath)
 
     print ". . . . . . . . . ."
     print ". . . . .command: ."
@@ -111,10 +134,10 @@ def find_model(outputfolder):
         words = comm.split("=")
         if words[0] == "--model":
             if len(words) >= 2:
-                words1 =  words[1]
+                words1 = words[1]
             else:
                 words1 = commandargs[i+1]
-            modelpath = os.path.dirname( words1) + "/twiss_elements.dat"
+            modelpath = os.path.dirname(words1) + "/twiss_elements.dat"
             print "looking for model in ", modelpath
             if os.path.isfile(modelpath):
                 tfsmodel = tfs_pandas.read_tfs(modelpath, index="NAME")
@@ -122,19 +145,29 @@ def find_model(outputfolder):
                 return tfsmodel
     return None
 
+def _load_beta_plane(path, plane):
+    if os.path.isfile(os.path.join(path, 'getbeta{}_free.out'.format(plane))):
+        xfilename = os.path.join(path, 'getbeta{}_free.out'.format(plane))
+    elif os.path.isfile(os.path.join(path, 'getbeta{}.out'.format(plane))):
+        xfilename = os.path.join(path, 'getbeta{}.out'.format(plane))
+    else:
+        return None
+    bbx = tfs_pandas.read_tfs(xfilename, index="NAME")
+    plane_ = plane.upper()
+
+    dfx = bbx.loc[:, ["S", "BET{}MDL".format(plane_), "BET" + plane_]]
+    dfx.loc[:, "BBEAT"] = (bbx.loc[:, "BET" + plane_] / bbx.loc[:, "BET{}MDL".format(plane_)] - 1) * 100.0
+    dfx.loc[:, "ERR"] = (bbx.loc[:, "ERRBET" + plane_] / bbx.loc[:, "BET{}MDL".format(plane_)]) * 100.0
+    return dfx
+
 def load_result(path):
-    bbx = tfs_pandas.read_tfs(os.path.join(path, 'getbetax_free.out'), index="NAME")
-    bby = tfs_pandas.read_tfs(os.path.join(path, 'getbetay_free.out'), index="NAME")
+    getllm_result = GetLLMResult(path)
+    getllm_result.betax = _load_beta_plane(path, "x")
+    getllm_result.betay = _load_beta_plane(path, "y")
+    if os.path.isfile(os.path.join(path, 'getlobster.out')):
+        getllm_result.lobster = tfs_pandas.read_tfs(os.path.join(path, 'getlobster.out'), index="NAME")
 
-    dfx = bbx.loc[:, ["S", "BETXMDL"]]
-    dfx.loc[:, "BBEAT"] = (bbx.loc[:, "BETX"] / bbx.loc[:, "BETXMDL"] - 1) * 100.0
-    dfx.loc[:, "ERR"] = (bbx.loc[:, "ERRBETX"] / bbx.loc[:, "BETXMDL"]) * 100.0
-
-    dfy = bby.loc[:, ["S", "BETYMDL"]]
-    dfy.loc[:, "BBEAT"] = (bby.loc[:, "BETY"] / bby.loc[:, "BETYMDL"] - 1) * 100.0
-    dfy.loc[:, "ERR"] = (bby.loc[:, "ERRBETY"] / bby.loc[:, "BETYMDL"]) * 100.0
-
-    return bbx, bby, dfx, dfy
+    return getllm_result
 
 def plot_errorbar(ax, df, color, label, fmt):
     ax.errorbar(df["S"], df["BBEAT"], df["ERR"], label=label, c=color[0], markeredgecolor=color[1], fmt=fmt, markersize=3.0)
