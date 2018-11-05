@@ -8,7 +8,7 @@ import betabeatsrc
 
 from pyterminal import *
 from getllm_result_plots import *
-from GetLLM.GetLLM import _tb_
+from measure_optics import _tb_
 from utils import tfs_pandas as tfs
 import numpy as np
 from numpy import sqrt, square, mean
@@ -346,10 +346,14 @@ def plot_betabeating(command):
 
     plt.tight_layout(rect=(.02,.02,.98, tightlayout), pad=0.5)
 
-    f.show()
 
     if command == 'print':
+        f.show()
         f.savefig(parameters["ofile"])
+    elif command == 'nodisp':
+        f.savefig(parameters["ofile"])
+    else:
+        f.show()
 
 
 def plot_disp_over_beta(command):
@@ -373,7 +377,7 @@ def plot_disp_over_beta(command):
     if len(results) == 0:
         print "----------------> no results"
         return
-    print "plotting LOBSTER"
+    print "plotting Disp / beta"
     width = float(parameters["width"])
     height = width / float(parameters["aspect"])
 
@@ -479,7 +483,7 @@ def plot_disp_over_beta(command):
         f.savefig(parameters["ofile"])
 
 def plot_column(command):
-    """
+    r"""
     Plots the column of an arbitrary file. Usage:
 
         plot FILENAME COLUMN
@@ -500,8 +504,12 @@ def plot_column(command):
 
     More Examples:
         1. plotting normalised dispersion:
-            set y_label=$\Delta N D_x\;\left[\sqrt{m}\,\right]$
+            set y_label=$\Delta  D_x/ \sqrt{\beta_x}\;\left[\sqrt{m}\,\right]$
             plot getNDx.out u S:NDX-NDXMDL:STDNDX print
+        2. plotting dispersion:
+            set y_label=$\Delta D_x\; \left[ m \right]$
+            set y_label2=$\Delta D_y\; \left[ m \right]$
+            plot getDx.out,getDy.out u S:DX-DXMDL:STDDX u2 S:DY-DYMDL:STDDY print
     """
 
     # do the plotting
@@ -591,6 +599,9 @@ def plot_column(command):
             _plot_ax(x2_column, y2_column, err2_column, l, i, data2, label, ax2)
         i += 1
 
+    ax1.set_ylim(-float(parameters["ylim"]), float(parameters["ylim"]))
+    if filename2 is not None:
+        ax2.set_ylim(-float(parameters["ylim"]), float(parameters["ylim"]))
 
     if parameters["legend"] == "1":
         if parameters["style"] == "OMC":
@@ -831,13 +842,18 @@ def _plot_ax(x_column, y_column, err_column, l, i, data, label, ax1):
         print "plotting points"
         print "x-axis = {}".format(x_column)
         print "y-axis = {}".format(y_column)
-        ax1.plot(data[x_column], y_values, ' o', color=colors[l-i][0],
+        fmt = '-o' if parameters['lines'] == '1' else ' o'
+        ax1.plot(data[x_column], y_values, fmt, color=colors[l-i][0],
                  markeredgecolor=colors[l-i][1], label=label, markersize=4.0)
     else:
         print "plotting points"
         print "x-axis = {}".format(x_column)
         print "y-axis = {}".format(y_column)
         print "errors = {}".format(err_column)
+        if parameters['lines'] == '1':
+            print "plot with lines"
+            ax1.plot(data[x_column], y_values, fmt='-o', color=colors[l-i][0],
+                     markeredgecolor=colors[l-i][1], label=label, markersize=4.0)
         ax1.errorbar(data[x_column], y_values, data[err_column], fmt=' o', color=colors[l-i][0],
                  markeredgecolor=colors[l-i][1], label=label, markersize=4.0)
 # --------------------------------------------------------------------------------------------------
