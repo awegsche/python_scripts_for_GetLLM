@@ -7,6 +7,8 @@ import argparse
 import logging
 import pandas
 import numpy as np
+import subprocess
+from subprocess import Popen
 
 # GETLLM paths
 import betabeatsrc
@@ -16,9 +18,24 @@ from utils import logging_tools
 from utils import tfs_pandas
 from model import manager
 import pyterminal
+import reinterpret_logger
 
-LOGGER = logging_tools.get_logger(__name__, level_console=logging.INFO)
-LOGGER.addHandler(logging_tools.stream_handler(max_level=logging.DEBUG))
+LOGGER = logging_tools.get_logger(__name__, level_console=logging.DEBUG)
+#LOGGER.addHandler(logging_tools.stream_handler(max_level=logging.DEBUG))
+
+SEPARATOR = "\33[38;2;128;128;128m | "
+DBG_COLR = "\33[38;2;0;200;200m\33[1m"
+ERR_COLR = "\33[38;2;200;0;0m\33[1m"
+WRN_COLR = "\33[38;2;220;110;0m\33[1m"
+NFO_COLR = "\33[38;2;200;0;200m\33[1m"
+REP_COLR = "\33[38;2;128;128;128m\33[1m"
+DBG_FLAG = DBG_COLR + "DBG\33[22m" + SEPARATOR + "\33[0m\33[1m"
+ERR_FLAG = ERR_COLR + "ERR\33[22m" + SEPARATOR + "\33[38;2;255;0;0m"
+WRN_FLAG = WRN_COLR + "WRN\33[22m" + SEPARATOR + "\33[38;2;200;100;0m"
+NFO_FLAG = NFO_COLR + "NFO\33[22m" + SEPARATOR + "\33[0m\33[1m"
+REP_FLAG = REP_COLR + "   \33[22m" + SEPARATOR + "\33[0m\33[1m"
+PRINT_LINELEN = 120
+
 
 # ----- GLOBALS for analysis
 folderpairs = None
@@ -34,111 +51,13 @@ def main():
     LOGGER.info("============================================================")
     LOGGER.info("new output folder = '{}'".format(theseargs.output))
 
-    if os.path.isfile(os.path.join(theseargs.source, "getbetax_free.out")):
-        getbetax_path = os.path.join(theseargs.source, "getbetax_free.out")
-    elif os.path.isfile(os.path.join(theseargs.source, "getbetax.out")):
-        getbetax_path = os.path.join(theseargs.source, "getbetax.out")
+    if os.path.isfile(os.path.join(theseargs.source, "thecommand.py")):
+        LOGGER.info("thecommand.py found. Run it with new output path?")
+        LOGGER.info("info: new outputpath = '{}'".format(theseargs.output))
+        if raw_input("run thecommand? (y/n)") == "y":
+            _run_thecommand(os.path.join(theseargs.source, "thecommand.py"))
     else:
-        LOGGER.error("Source could not be found")
-        sys.exit(1)
-
-
-
-    getb = tfs_pandas.read_tfs(getbetax_path)
-
-    command = getb.headers["Command"].split("' '")
-    command[-1] = command[-1].strip("'")
-    #LOGGER.debug(command)
-    command_accel = "lhc"
-    command_beam = 1
-    LOGGER.debug("Commands:")
-    for com in command[1:]:
-        # analyse command
-        words = com.split('=')
-        if len(words) == 2:
-            LOGGER.debug("{}: {}".format(words[0], words[1]))
-            if words[0] == "--accel" or words[0] == "-a":
-                if words[1] == "LHCB1":
-                    command_accel = "lhc"
-                    command_beam = 1
-                elif words[1] == "LHCB2":
-                    command_accel = "lhc"
-                    command_beam = 2
-
-
-    options, accelerator = GetLLM._parse_args(command[1:])
-
-    LOGGER.debug("--------------------------------------------------")
-    LOGGER.debug("---- GetLLM options: -----------------------------")
-
-    for key, value in options.__dict__.iteritems():
-        if key == "files":
-            files = value.split(',')
-            LOGGER.debug("- {:12s} :".format(files[0]))
-            for fname in files:
-                LOGGER.debug("-- {}".format(fname))
-        else:
-            LOGGER.debug("- {:12s} = {}".format(key, value))
-
-    LOGGER.debug("--------------------------------------------------")
-
-    options.output = theseargs.output
-    if theseargs.serial:
-        options.nprocesses = 0
-    if theseargs.model is not None:
-        options.model_dir = theseargs.model
-        accelerator = manager.get_accel_instance(
-            accel=command_accel, beam=command_beam, model_dir=theseargs.model)
-    if theseargs.no_union:
-        options.union = 0
-
-    LOGGER.warning("If you proceed, GetLLM will be launched. It will write to {}"
-                   .format(options.output))
-    LOGGER.warning("and might overwrite an existing directory.")
-    LOGGER.warning("Proceed? (y/n)")
-    proceed = raw_input(">")
-
-    if proceed == "y":
-        LOGGER.info("--------------------------------------------------")
-        LOGGER.info("  Starting GetLLM")
-
-
-        if options.errordefspath is not None:
-            accelerator.set_errordefspath(options.errordefspath)
-
-        GetLLM.main(
-            accelerator,
-            accelerator.model_dir,
-            outputpath=options.output,
-            files_to_analyse=options.files,
-            lhcphase=options.lhcphase,
-            bpmu=options.BPMUNIT,
-            cocut=float(options.COcut),
-            nbcpl=int(options.NBcpl),
-            nonlinear=options.nonlinear,
-            bbthreshold=options.bbthreshold,
-            errthreshold=options.errthreshold,
-            use_only_three_bpms_for_beta_from_phase=options.use_only_three_bpms_for_beta_from_phase,
-            number_of_bpms=options.number_of_bpms,
-            range_of_bpms=options.range_of_bpms,
-            use_average=options.use_average,
-            calibration_dir_path=options.calibration_dir_path,
-            nprocesses=options.nprocesses,
-            union=options.union)
-
-        with open(os.path.join(options.output, "themodel"), "w") as themodel:
-            themodel.write(accelerator.model_dir)
-
-    elif proceed == "n":
-        LOGGER.info("Cancelling")
-
-        LOGGER.info("Exit program")
-    else:
-        LOGGER.error(
-            "Couldn't understand '{}'. Will exit because I am confused and don't know what to do."
-            .format(proceed))
-        LOGGER.error("Exiting program")
-        sys.exit(1)
+        _rerun(theseargs)
 
     if theseargs.analyse:
         if os.path.isdir(theseargs.output):
@@ -277,6 +196,8 @@ def parse_arguments():
                         help="force UNION=FALSE")
     parser.add_argument("--analyse", dest="analyse", action="store_true",
                         help="analyse the differences between the old and new code afterwards")
+    parser.add_argument("--orig", dest="original", action="store_true",
+                        help="rerun the original code and save to ouput")
     return parser.parse_args()
 
 def diff_cmd(command):
@@ -296,6 +217,179 @@ def init_pyterm():
     term.add_command(["diff"], diff_cmd)
 
     return term
+
+def _shorten_filename(fname):
+    paths = fname.split(os.sep)
+
+    spaths = [paths[0]]
+
+    for p in paths[1:-1]:
+        spaths.append(p[0])
+    spaths.append(paths[-1])
+    return os.sep.join(spaths)
+
+def _run_thecommand(thecommand):
+    p = Popen(["python", thecommand])
+
+    p.wait()
+
+
+
+def _rerun(theseargs):
+    if os.path.isfile(os.path.join(theseargs.source, "getbetax_free.out")):
+        getbetax_path = os.path.join(theseargs.source, "getbetax_free.out")
+    elif os.path.isfile(os.path.join(theseargs.source, "getbetax.out")):
+        getbetax_path = os.path.join(theseargs.source, "getbetax.out")
+    else:
+        LOGGER.error("Source could not be found")
+        sys.exit(1)
+
+    pyscript = "import os\nimport sys\n"
+    pyscript += "BETABEATPATH = '{}'\n\nsys.path.append(BETABEATPATH)\n".format(betabeatsrc.BETABEATPATH)
+    pyscript += "NEW_OUTPUT = '{}'\n\n".format(theseargs.output)
+    pyscript += (
+        "from GetLLM import GetLLM\n"
+        "from GetLLM import GetLLMError\n\n"
+        "from utils import logging_tools\n"
+        "LOG = logging_tools.get_logger(__name__)\n\n"
+    )
+    pyscript += "command = []\n"
+
+    getb = tfs_pandas.read_tfs(getbetax_path)
+
+    command = getb.headers["Command"].split("' '")
+    command[-1] = command[-1].strip("'")
+    #LOGGER.debug(command)
+    command_accel = "lhc"
+    command_beam = 1
+    files = ""
+    LOGGER.debug("Commands:")
+    for i, com in enumerate(command[1:]):
+        # analyse command
+        words = com.split('=')
+        if len(words) == 2:
+            if words[0] == "--accel" or words[0] == "-a":
+                pyscript += "command.append('{}')\n".format(com)
+                old_accel_command = words[1]
+                if words[1] == "LHCB1":
+                    command_accel = "lhc"
+                    command_beam = 1
+                elif words[1] == "LHCB2":
+                    command_accel = "lhc"
+                    command_beam = 2
+                LOGGER.info("-- accel: " + words[1])
+
+            elif (words[0] == '--model' or words[0] == '-m'):
+                if theseargs.model is not None:
+                    LOGGER.info("... redirecting model")
+                    LOGGER.info("model: " + theseargs.model)
+                    command[i+1] = '--model=' + os.path.join(os.getcwd(), theseargs.model)
+                    pyscript += "command.append(\"--model={}\")\n".format(theseargs.model)
+                else:
+                    if words[1].endswith(".dat"):
+                        theseargs.model = os.path.dirname(words[1])
+                    else:
+                        theseargs.model = words[1]
+                    LOGGER.info("-- model: " + theseargs.model)
+
+            elif words[0] == '--files' or words[0] == "-f":
+                LOGGER.info("-- files:")
+
+                files = words[1].split(',')
+                for fname in files:
+                    LOGGER.debug(" - {}".format(_shorten_filename(fname)))
+            else:
+                pyscript += "command.append('{}')\n".format(com)
+                LOGGER.info("{}: {}".format(words[0], words[1]))
+
+    pyscript += "options, accelerator = GetLLM._parse_args(command)\n"
+
+
+
+    LOGGER.warning("If you proceed, GetLLM will be launched. It will write to \33[1m{}\33[22m"
+                   .format(theseargs.output))
+    LOGGER.warning("and might overwrite an existing directory.")
+    LOGGER.warning("Proceed? (y/n)")
+    proceed = raw_input(">")
+
+    print files
+
+    if proceed == "y":
+        if os.path.exists(os.path.join(theseargs.output, "measure_optics.log")):
+            LOGGER.info("remove old logfile")
+            os.remove(os.path.join(theseargs.output, "measure_optics.log"))
+        LOGGER.info("--------------------------------------------------")
+        LOGGER.info("  Starting GetLLM")
+        LOGGER.info("starting measure_optics via command line . . .")
+
+        if theseargs.original:
+            p = Popen([
+                "/afs/cern.ch/work/o/omc/anaconda/bin/python",
+                "/media/awegsche/HDD/CernBox/MyBeta-Beat.src/Beta-Beat.src/GetLLM/GetLLM.py",
+                "--accel={}".format(old_accel_command),
+                "--nbcpl=1",
+                "--model={}".format(os.path.join(os.getcwd(), theseargs.model, "twiss.dat")),
+                "--files={}".format(",".join(files)),
+                "--output={}".format(theseargs.output),
+           ])
+
+        else:
+            p = Popen([
+                "python",
+                "/media/awegsche/HDD/CernBox/MyBeta-Beat.src/Beta-Beat.src/measure_optics.py",
+                "--accel={}".format(command_accel),
+                "--coupling_method=1",
+                "--lhcmode=lhc_runII_2018",
+                "--beam={}".format(command_beam),
+                "--model_dir={}".format(os.path.join(os.getcwd(), theseargs.model)),
+                "--files={}".format(",".join(files)),
+                "--outputdir={}".format(theseargs.output),
+                "--calibrationdir=/afs/cern.ch/eng/sl/lintrack/LHC_commissioning2017/Calibration_factors_2017/Calibration_factors_2017_beam1"
+            ])
+        p.wait()
+        LOGGER.info("collecting debug output . . . ")
+        logmessages = reinterpret_logger.read_logfile(os.path.join(theseargs.output, "measure_optics.log"))
+        LOGGER.info("{} lines in log".format(len(logmessages)))
+
+        print "\n\33[38;2;128;128;128m" + "".join(["|"] * PRINT_LINELEN) + "\33[0m"
+        for logm in logmessages:
+            messline = ""
+            if logm.Level == "DEBUG":
+                messline = DBG_FLAG + logm.Message + DBG_COLR
+            elif logm.Level == "WARNING":
+                messline = WRN_FLAG + logm.Message + WRN_COLR
+            elif logm.Level == "ERROR":
+                messline = ERR_FLAG + logm.Message + ERR_COLR
+            elif logm.Level == "INFO":
+                messline = NFO_FLAG + logm.Message + NFO_COLR
+            else: messline = REP_FLAG + logm.Message + REP_COLR
+
+            messline += _print_endofline(logm.Message)
+            print messline + "\33[0m"
+
+        print "\33[38;2;128;128;128m" + "".join(["|"] * PRINT_LINELEN) + "\33[0m\n"
+
+        with open(os.path.join(theseargs.output, "thecommand.py"), "w") as thecommand:
+            thecommand.write(pyscript)
+
+        with open(os.path.join(theseargs.output, "themodel"), "w") as themodel:
+            themodel.write(theseargs.model)
+
+    elif proceed == "n":
+        LOGGER.info("Cancelling")
+
+        LOGGER.info("Exit program")
+    else:
+        LOGGER.error(
+            "Couldn't understand '{}'. Will exit because I am confused and don't know what to do."
+            .format(proceed))
+        LOGGER.error("Exiting program")
+        sys.exit(1)
+
+def _print_endofline(mess):
+    return "".join([" "] * min(4, PRINT_LINELEN - 11 - len(mess))) +\
+            "".join(["."] * max(0, PRINT_LINELEN - 15 - len(mess))) +\
+            "".join(["|"] * min(5, PRINT_LINELEN - 6 - len(mess)))
 
 
 if __name__ == "__main__":
