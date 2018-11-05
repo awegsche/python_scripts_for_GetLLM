@@ -42,22 +42,23 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
             ax1.set_ylim(0, ylim)
     else:
         ylim = 100000
-    IPtickslabels = [
-        "\\textbf{{\\sffamily IP2}}", "\\textbf{{\\sffamily IP3}}", "\\textbf{{\\sffamily IP4}}",
-        "\\textbf{{\\sffamily IP5}}", "\\textbf{{\\sffamily IP6}}", "\\textbf{{\\sffamily IP7}}",
-        "\\textbf{{\\sffamily IP8}}", "\\textbf{{\\sffamily IP1}}"
-    ]
-    IPticknames = [
-        "IP2", "IP3", "IP4", "IP5", "IP6", "IP7", "IP8", "IP1"
-    ]
-    if params["beam"] == "1":
-        IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
-    else:
-        print " W A R N I N G: Beam2 fallback IPs have to be looked up"
-        IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
-    # try to find the positions of the IPs
-    ticktup = []
+
     if params["accel"] == "LHC":
+        IPtickslabels = [
+            "\\textbf{{\\sffamily IP2}}", "\\textbf{{\\sffamily IP3}}", "\\textbf{{\\sffamily IP4}}",
+            "\\textbf{{\\sffamily IP5}}", "\\textbf{{\\sffamily IP6}}", "\\textbf{{\\sffamily IP7}}",
+            "\\textbf{{\\sffamily IP8}}", "\\textbf{{\\sffamily IP1}}"
+        ]
+        IPticknames = [
+            "IP2", "IP3", "IP4", "IP5", "IP6", "IP7", "IP8", "IP1"
+        ]
+        if params["beam"] == "1":
+            IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
+        else:
+            print " W A R N I N G: Beam2 fallback IPs have to be looked up"
+            IPticks = [192.923, 3523.267, 6857.49, 10189.78, 13522.212, 16854.649, 20185.865, 23519.37]
+        # try to find the positions of the IPs
+        ticktup = []
         print " reading IP positions from model ..."
         for i in range(len( IPtickslabels)):
             ticktup.append([
@@ -66,9 +67,9 @@ def setup_plot_area(params, ax1, tfsmodel, ylabel, xlabel, plot_omctitle = True)
             ])
 
 
-    ticktup.sort(key=lambda tup: tup[1])
-    IPtickslabels = zip(*ticktup)[0]
-    IPticks = zip(*ticktup)[1]
+        ticktup.sort(key=lambda tup: tup[1])
+        IPtickslabels = zip(*ticktup)[0]
+        IPticks = zip(*ticktup)[1]
 
     if params["accel"] == "JPARC":
         ax1.set_xlim(0, 1600)
@@ -157,6 +158,7 @@ def _load_beta_plane(path, plane):
 
     dfx = bbx.loc[:, ["S", "BET{}MDL".format(plane_), "BET" + plane_]]
     dfx.loc[:, "BBEAT"] = (bbx.loc[:, "BET" + plane_] / bbx.loc[:, "BET{}MDL".format(plane_)] - 1) * 100.0
+    #dfx.loc[:, "BBEAT"] = (bbx.loc[:, "BBEAT"] ) * 100.0
     dfx.loc[:, "ERR"] = (bbx.loc[:, "ERRBET" + plane_] / bbx.loc[:, "BET{}MDL".format(plane_)]) * 100.0
     return dfx
 
