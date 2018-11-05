@@ -16,7 +16,7 @@ class ACommand:
         if self.action.__doc__:
             helpstring = self.action.__doc__
         return ("\n\n" + "- " * 50 + "\n\n"
-                "      \33[1m" + ", ".join(self.command_aliases) + "\33[21m\n\n" + helpstring)
+                "      \33[1m" + ", ".join(self.command_aliases) + "\33[22m\n\n" + helpstring)
 
 class ATerm:
     """The python terminal. This class contains several actions. An action is a function that takes
