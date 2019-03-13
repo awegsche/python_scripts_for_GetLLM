@@ -24,6 +24,8 @@ def ansi(colorstring="none"):
             - the string 'none' to reset the color to default
 
     """
+    if colorstring == "" or colorstring is None:
+        return "\33[0m"
     if colorstring[0] == '#':
         esc = "\33[38;2;"
         if len(colorstring) == 7:
