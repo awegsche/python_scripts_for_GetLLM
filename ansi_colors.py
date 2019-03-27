@@ -38,7 +38,7 @@ def ansi(color="none"):
         return "\33[38;2;{:d};{:d};{:d}m".format(int(255 * color[0]),
                                                  int(255 * color[1]),
                                                  int(255 * color[2]))
-    tupl = _clr_tuple(color)
+    tupl = clr_tuple(color)
     if tupl is not None:
         return ansi(tupl)
     if color == "bold":
@@ -55,15 +55,15 @@ def clr_multiply(clr1, clr2):
         clr1 (string): representation (see ansi) of first color
         clr2 (string): representation of the second color
     """
-    a = _clr_tuple(clr1)
-    b = _clr_tuple(clr2)
+    a = clr_tuple(clr1)
+    b = clr_tuple(clr2)
 
     return (max(0.0, min(1.0, a[0] * b[0])),
             max(0.0, min(1.0, a[1] * b[1])),
             max(0.0, min(1.0, a[2] * b[2])))
 
 
-def _clr_tuple(colorstring):
+def clr_tuple(colorstring):
     """ converts colorstring into a tuple of ints (r,g,b)
 
     Args:
@@ -80,9 +80,9 @@ def _clr_tuple(colorstring):
                     16 * _hexbyte(colorstring[2]),
                     16 * _hexbyte(colorstring[3]))
     if colorstring in colors.CSS4_COLORS:
-        return _clr_tuple(colors.CSS4_COLORS[colorstring])
+        return clr_tuple(colors.CSS4_COLORS[colorstring])
     if colorstring in colors.BASE_COLORS:
-        return _clr_tuple(colors.BASE_COLORS[colorstring])
+        return clr_tuple(colors.BASE_COLORS[colorstring])
 
     rgb_re = re.compile("rgb:(.*),(.*),(.*)")
 
