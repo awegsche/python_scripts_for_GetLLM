@@ -26,10 +26,10 @@ def ansi(color="none"):
         color (string or tuple): A string representing the color. This can be one of the following:
             - an HTML color in the format ```#RRGGBB``` or ```#RGB```
             - a matplotlib color name like ```"firebrick"```
-            - an RGB color in the format ```rgb:r,g,b``` where r,g,b \in [0,1)
+            - an RGB color in the format ```rgb:r,g,b``` where r,g,b \\in [0,1)
             example: ```rgb:1.0,0.0,0.0```
             - the string 'none' to reset the color to default
-            - a tuple (r, g, b) where r,g,b \n [0,255]
+            - a tuple (r, g, b) where r,g,b \\in [0,255]
 
     """
     if color == "" or color is None:
